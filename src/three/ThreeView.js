@@ -1,22 +1,19 @@
-import * as THREE from 'three';
+// Deprecated shim for ThreeView
+// The original 3D overlay was removed. Keep a small shim to avoid
+// runtime errors if any leftover imports exist.
 
-// Minimal Three.js first-person view overlay.
-// Maps Phaser world (pixels) to Three units using a scale factor.
 export class ThreeView {
-  constructor(phaserScene) {
-    this.phaserScene = phaserScene;
-    this.enabled = false;
-    this.scaleFactor = 1 / 16; // 16 pixels -> 1 unit
-
-    // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.domElement.style.position = 'absolute';
-    this.renderer.domElement.style.top = '0';
-    this.renderer.domElement.style.left = '0';
-    this.renderer.domElement.style.pointerEvents = 'none';
-    this.renderer.domElement.style.zIndex = 5; // above Phaser canvas
-    document.body.appendChild(this.renderer.domElement);
+  constructor() {
+    console.warn('ThreeView is deprecated and has been removed.');
+  }
+  // No-op API to prevent runtime errors
+  show() {}
+  hide() {}
+  generateCity() {}
+  enablePointerLock() {}
+  update() {}
+  destroy() {}
+}
 
     // Scene & camera
     this.scene = new THREE.Scene();

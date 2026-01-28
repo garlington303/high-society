@@ -21,7 +21,7 @@ export class Player {
     this.sprite.setDepth(10);
     this.sprite.setData('entity', this);
 
-    // When true, external controller (ThreeView) drives movement instead
+    // When true, an external controller drives movement instead
     this.disableManualInput = false;
 
     // Sprinting costs heat over time
@@ -29,7 +29,7 @@ export class Player {
   }
 
   update(cursors, keys, delta) {
-    // If external input (ThreeView) is controlling movement, derive animation from current velocity
+    // If external input is controlling movement, derive animation from current velocity
     if (this.disableManualInput) {
       const vx = this.sprite.body.velocity.x;
       const vy = this.sprite.body.velocity.y;
