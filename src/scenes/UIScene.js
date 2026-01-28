@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DRUGS } from '../entities/Dealer.js';
+import { WARES } from '../entities/Alchemist.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() {
@@ -9,29 +9,27 @@ export class UIScene extends Phaser.Scene {
   create() {
     this.gameScene = this.scene.get('GameScene');
 
-    // UI styling
+    // UI styling - medieval fantasy theme
     this.style = {
       font: '12px Courier New',
       fontLarge: '14px Courier New',
-      colorText: '#ffffff',
-      colorMuted: '#b2bec3',
-      colorMoney: '#00b894',
-      colorHeat: '#d63031',
-      colorWarning: '#fdcb6e',
+      colorText: '#f5f0e1',
+      colorMuted: '#a59d8a',
+      colorGold: '#ffd700',
+      colorInfamy: '#8b0000',
+      colorWarning: '#cd853f',
+      colorSuccess: '#228b22',
       padding: 10
     };
 
     // Create UI elements
-    this.createMoneyDisplay();
-    this.createHeatMeter();
+    this.createGoldDisplay();
+    this.createHealthDisplay();
+    this.createInfamyMeter();
     this.createInventoryPanel();
     this.createTimeDisplay();
     this.createMessageLog();
     this.createControlsHint();
-
-    // Dealer menu (hidden by default)
-    this.dealerMenu = this.createDealerMenu();
-    this.dealerMenu.setVisible(false);
 
     // Listen for events
     this.setupEventListeners();
@@ -45,70 +43,101 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  createMoneyDisplay() {
+  createGoldDisplay() {
     const x = this.style.padding;
     const y = this.style.padding;
+    // Left-aligned gold box
+    this.goldBg = this.add.rectangle(x, y, 120, 28, 0x2a2418, 0.85).setOrigin(0, 0);
+    this.add.image(x + 6, y + 14, 'icon_gold').setScale(0.8).setOrigin(0, 0.5);
 
-    this.moneyBg = this.add.rectangle(x + 50, y + 12, 120, 28, 0x000000, 0.7);
-    this.moneyBg.setOrigin(0.5);
-
-    this.add.image(x + 10, y + 12, 'icon_money').setScale(0.8);
-
-    this.moneyText = this.add.text(x + 25, y + 5, '$500', {
+    this.goldText = this.add.text(x + 36, y + 6, '500g', {
       font: this.style.fontLarge,
-      fill: this.style.colorMoney
-    });
+      fill: this.style.colorGold
+    }).setOrigin(0, 0);
+
+    // remember top layout positions for subsequent UI elements
+    this._topUI_x = x;
+    this._topUI_y = y;
+    this._topUI_height = 28;
   }
 
-  createHeatMeter() {
-    const x = this.style.padding;
-    const y = 50;
+  createHealthDisplay() {
+    // Top-center health bar
+    const hpWidth = 160;
+    const centerX = Math.floor(this.scale.width / 2);
+    const y = this.style.padding;
 
-    this.add.text(x, y, 'HEAT', {
+    const left = centerX - Math.floor(hpWidth / 2);
+    this.hpBg = this.add.rectangle(left, y, hpWidth, 14, 0x2a2418, 0.85).setOrigin(0, 0);
+    this.hpFill = this.add.rectangle(left + 2, y + 7, 0, 10, 0xb22222).setOrigin(0, 0.5);
+    this.hpText = this.add.text(centerX, y + 2, 'VITALITY 100/100', {
       font: this.style.font,
+      fill: this.style.colorText
+    }).setOrigin(0.5, 0);
+    this.hpTween = null;
+
+    this._healthUI_y = y;
+    this._healthUI_height = 14;
+  }
+
+  createInfamyMeter() {
+    // Infamy meter below health
+    const meterWidth = 160;
+    const centerX = Math.floor(this.scale.width / 2);
+    const y = this._healthUI_y + this._healthUI_height + 6;
+
+    const left = centerX - Math.floor(meterWidth / 2);
+    this.infamyBg = this.add.rectangle(left, y, meterWidth, 12, 0x2a2418, 0.85).setOrigin(0, 0);
+    this.infamyFill = this.add.rectangle(left + 2, y + 6, 0, 8, 0x8b0000).setOrigin(0, 0.5);
+    this.infamyText = this.add.text(centerX, y, 'INFAMY 0', {
+      font: '10px Courier New',
       fill: this.style.colorMuted
-    });
-
-    // Heat bar background
-    this.heatBarBg = this.add.rectangle(x + 50, y + 6, 100, 12, 0x2d3436);
-    this.heatBarBg.setOrigin(0, 0.5);
-
-    // Heat bar fill
-    this.heatBarFill = this.add.rectangle(x + 51, y + 6, 0, 10, 0xd63031);
-    this.heatBarFill.setOrigin(0, 0.5);
-
-    // Heat level text
-    this.heatLevelText = this.add.text(x + 155, y, 'SAFE', {
-      font: this.style.font,
-      fill: this.style.colorMuted
-    });
+    }).setOrigin(0.5, 0);
+    this.infamyTween = null;
   }
 
   createInventoryPanel() {
-    const x = this.scale.width - 130;
+    const x = this.scale.width - 140;
     const y = this.style.padding;
 
-    // Background
-    this.invBg = this.add.rectangle(x + 55, y + 50, 120, 100, 0x000000, 0.7);
+    // Background with medieval styling
+    this.invBg = this.add.rectangle(x + 60, y + 55, 130, 110, 0x2a2418, 0.85);
 
-    this.add.text(x, y, 'INVENTORY', {
+    this.add.text(x, y, 'WARES', {
       font: this.style.font,
       fill: this.style.colorMuted
     });
 
+    // Inventory rendered as small icon + count for each ware
     this.invItems = [];
-    const drugs = ['weed', 'pills', 'coke', 'meth'];
-    drugs.forEach((drug, i) => {
-      const itemY = y + 20 + i * 18;
-      const label = this.add.text(x + 5, itemY, DRUGS[drug].name, {
-        font: this.style.font,
+    const wares = ['moonleaf', 'vigor', 'dragonsbreath', 'shadowbane'];
+    const wareColors = {
+      moonleaf: 0x90ee90,
+      vigor: 0x4169e1,
+      dragonsbreath: 0xff4500,
+      shadowbane: 0x4b0082
+    };
+
+    wares.forEach((ware, i) => {
+      const itemY = y + 22 + i * 22;
+
+      // Icon (colored rectangle)
+      const icon = this.add.rectangle(x + 8, itemY, 10, 10, wareColors[ware]);
+      icon.setOrigin(0, 0.5);
+
+      // Label (ware name)
+      const label = this.add.text(x + 24, itemY, WARES[ware].name, {
+        font: '10px Courier New',
         fill: this.style.colorText
-      });
-      const amount = this.add.text(x + 80, itemY, '0', {
+      }).setOrigin(0, 0.5);
+
+      // Count (right aligned)
+      const amount = this.add.text(x + 120, itemY, '0', {
         font: this.style.font,
         fill: this.style.colorMuted
-      });
-      this.invItems.push({ drug, label, amount });
+      }).setOrigin(1, 0.5);
+
+      this.invItems.push({ ware, icon, label, amount });
     });
   }
 
@@ -116,7 +145,7 @@ export class UIScene extends Phaser.Scene {
     const x = this.scale.width - 80;
     const y = this.scale.height - 40;
 
-    this.timeBg = this.add.rectangle(x + 30, y + 12, 70, 28, 0x000000, 0.7);
+    this.timeBg = this.add.rectangle(x + 30, y + 12, 70, 28, 0x2a2418, 0.85);
 
     this.timeText = this.add.text(x, y, 'DAY 1', {
       font: this.style.font,
@@ -133,7 +162,7 @@ export class UIScene extends Phaser.Scene {
     const x = this.style.padding;
     const y = this.scale.height - 100;
 
-    this.messageBg = this.add.rectangle(x + 150, y + 40, 310, 80, 0x000000, 0.5);
+    this.messageBg = this.add.rectangle(x + 150, y + 40, 310, 80, 0x2a2418, 0.5);
     this.messageBg.setOrigin(0.5);
 
     this.messages = [];
@@ -154,114 +183,75 @@ export class UIScene extends Phaser.Scene {
 
     this.add.text(x, y, 'WASD: Move | SHIFT: Sprint | E: Interact', {
       font: '10px Courier New',
-      fill: '#636e72'
+      fill: '#5c5344'
     }).setOrigin(0.5);
-  }
-
-  createDealerMenu() {
-    const container = this.add.container(this.scale.width / 2, this.scale.height / 2);
-
-    // Background
-    const bg = this.add.rectangle(0, 0, 300, 250, 0x1a1a2e, 0.95);
-    bg.setStrokeStyle(2, 0x6c5ce7);
-    container.add(bg);
-
-    // Title
-    const title = this.add.text(0, -100, 'DEALER', {
-      font: '16px Courier New',
-      fill: '#6c5ce7'
-    }).setOrigin(0.5);
-    container.add(title);
-
-    // Stock items
-    this.dealerStockTexts = [];
-    for (let i = 0; i < 4; i++) {
-      const itemText = this.add.text(-130, -60 + i * 40, '', {
-        font: this.style.font,
-        fill: this.style.colorText
-      });
-      container.add(itemText);
-      this.dealerStockTexts.push(itemText);
-    }
-
-    // Close hint
-    const closeHint = this.add.text(0, 100, 'Press E or ESC to close', {
-      font: '10px Courier New',
-      fill: '#636e72'
-    }).setOrigin(0.5);
-    container.add(closeHint);
-
-    // Keys for buying
-    this.buyKeys = this.input.keyboard.addKeys({
-      one: Phaser.Input.Keyboard.KeyCodes.ONE,
-      two: Phaser.Input.Keyboard.KeyCodes.TWO,
-      three: Phaser.Input.Keyboard.KeyCodes.THREE,
-      four: Phaser.Input.Keyboard.KeyCodes.FOUR,
-      esc: Phaser.Input.Keyboard.KeyCodes.ESC,
-      e: Phaser.Input.Keyboard.KeyCodes.E
-    });
-
-    return container;
   }
 
   setupEventListeners() {
-    // Heat changes
-    this.gameScene.events.on('heatChanged', this.onHeatChanged, this);
-    this.gameScene.events.on('heatWarning', this.onHeatWarning, this);
-
-    // Dealer menu
-    this.gameScene.events.on('openDealer', this.openDealerMenu, this);
+    // Infamy events
+    this.gameScene.events.on('infamyChanged', this.onInfamyChanged, this);
+    this.gameScene.events.on('infamyWarning', this.onInfamyWarning, this);
 
     // Sales
     this.gameScene.events.on('sale', this.onSale, this);
     this.gameScene.events.on('saleFailed', this.onSaleFailed, this);
 
-    // Safe house
-    this.gameScene.events.on('safehouse', this.onSafehouse, this);
+    // Guildhall (sanctuary)
+    this.gameScene.events.on('guildhall', this.onGuildhall, this);
 
-    // Police events
-    this.gameScene.events.on('policeAlert', this.onPoliceAlert, this);
-    this.gameScene.events.on('playerCaught', this.onPlayerCaught, this);
-    this.gameScene.events.on('busted', this.onBusted, this);
+    // Guard events
+    this.gameScene.events.on('guardAlert', this.onGuardAlert, this);
+    this.gameScene.events.on('playerCaptured', this.onPlayerCaptured, this);
+    this.gameScene.events.on('captured', this.onCaptured, this);
+
+    // Player damage/death events
+    this.gameScene.events.on('playerDamaged', this.onPlayerDamaged, this);
+    this.gameScene.events.on('playerDied', this.onPlayerDied, this);
   }
 
   updateUI() {
-    // Money
-    const money = this.registry.get('money');
-    this.moneyText.setText(`$${money}`);
+    // Gold
+    const gold = this.registry.get('gold');
+    this.goldText.setText(`${gold}g`);
 
-    // Heat
-    const heat = this.registry.get('heat');
-    const maxHeat = this.registry.get('maxHeat');
-    const heatPercent = heat / maxHeat;
-
-    this.heatBarFill.width = Math.floor(98 * heatPercent);
-
-    // Heat color gradient
-    if (heatPercent < 0.4) {
-      this.heatBarFill.setFillStyle(0x00b894);
-      this.heatLevelText.setText('SAFE');
-      this.heatLevelText.setColor('#00b894');
-    } else if (heatPercent < 0.6) {
-      this.heatBarFill.setFillStyle(0xfdcb6e);
-      this.heatLevelText.setText('WANTED');
-      this.heatLevelText.setColor('#fdcb6e');
-    } else if (heatPercent < 0.8) {
-      this.heatBarFill.setFillStyle(0xe17055);
-      this.heatLevelText.setText('HOT');
-      this.heatLevelText.setColor('#e17055');
+    // Infamy meter
+    const infamy = this.registry.get('infamy') || 0;
+    const maxInfamy = this.registry.get('maxInfamy') || 100;
+    const infamyPercent = infamy / maxInfamy;
+    const meterWidth = this.infamyBg.width - 4;
+    const targetInfamyW = Math.floor(meterWidth * infamyPercent);
+    
+    if (Math.abs(this.infamyFill.width - targetInfamyW) > 1) {
+      if (this.infamyTween) this.infamyTween.stop();
+      this.infamyTween = this.tweens.add({
+        targets: this.infamyFill,
+        props: { width: { value: targetInfamyW, duration: 200, ease: 'Cubic.easeOut' } },
+        onComplete: () => { this.infamyTween = null; }
+      });
+    }
+    this.infamyText.setText(`INFAMY ${Math.floor(infamy)}`);
+    
+    // Color based on level
+    if (infamy >= 80) {
+      this.infamyFill.setFillStyle(0xff0000);
+    } else if (infamy >= 60) {
+      this.infamyFill.setFillStyle(0xdc143c);
+    } else if (infamy >= 40) {
+      this.infamyFill.setFillStyle(0xcd5c5c);
     } else {
-      this.heatBarFill.setFillStyle(0xd63031);
-      this.heatLevelText.setText('HUNTED');
-      this.heatLevelText.setColor('#d63031');
+      this.infamyFill.setFillStyle(0x8b0000);
     }
 
-    // Inventory
-    const inventory = this.registry.get('inventory');
+    // Inventory (icon + count)
+    const inventory = this.registry.get('inventory') || {};
     this.invItems.forEach(item => {
-      const amount = inventory[item.drug] || 0;
+      const amount = inventory[item.ware] || 0;
       item.amount.setText(amount.toString());
-      item.amount.setColor(amount > 0 ? '#ffffff' : '#636e72');
+      item.amount.setColor(amount > 0 ? '#f5f0e1' : '#5c5344');
+      // Dim icon when amount is zero
+      item.icon.setAlpha(amount > 0 ? 1 : 0.25);
+      // Label color
+      if (item.label) item.label.setColor(amount > 0 ? this.style.colorText : this.style.colorMuted);
     });
 
     // Time
@@ -269,9 +259,31 @@ export class UIScene extends Phaser.Scene {
     const time = this.registry.get('time');
     this.timeText.setText(`DAY ${day}`);
     this.clockText.setText(`${time.toString().padStart(2, '0')}:00`);
+
+    // Health UI
+    if (this.gameScene && this.gameScene.player) {
+      const player = this.gameScene.player;
+      const hp = player.health || 0;
+      const maxHp = player.maxHealth || 100;
+      const hpPercent = hp / maxHp;
+
+      // Animate hp fill width
+      const innerWidth = Math.max(4, this.hpBg.width - 4);
+      const targetHpW = Math.floor(innerWidth * hpPercent);
+      if (Math.abs(this.hpFill.width - targetHpW) > 1) {
+        if (this.hpTween) this.hpTween.stop();
+        this.hpTween = this.tweens.add({
+          targets: this.hpFill,
+          props: { width: { value: targetHpW, duration: 200, ease: 'Cubic.easeOut' } },
+          onComplete: () => { this.hpTween = null; }
+        });
+      }
+
+      this.hpText.setText(`VITALITY ${hp}/${maxHp}`);
+    }
   }
 
-  addMessage(text, color = '#b2bec3') {
+  addMessage(text, color = '#a59d8a') {
     this.messages.push({ text, color, time: Date.now() });
 
     // Keep only last 4
@@ -290,103 +302,40 @@ export class UIScene extends Phaser.Scene {
     });
   }
 
-  onHeatChanged(data) {
+  onInfamyChanged(data) {
     if (data.change > 5) {
-      this.addMessage(`Heat +${data.change} (${data.source})`, '#e17055');
+      this.addMessage(`Infamy +${data.change} (${data.source})`, '#cd5c5c');
     }
   }
 
-  onHeatWarning(data) {
-    this.addMessage(data.message, data.direction === 'up' ? '#d63031' : '#00b894');
-  }
-
-  openDealerMenu(dealer) {
-    this.currentDealer = dealer;
-    this.dealerMenu.setVisible(true);
-
-    // Update stock display
-    const stock = dealer.getAvailableStock();
-    this.dealerStockTexts.forEach((text, i) => {
-      if (stock[i]) {
-        const s = stock[i];
-        text.setText(`[${i + 1}] ${s.info.name}: $${s.price} (x${s.amount})`);
-        text.setData('drug', s.drug);
-      } else {
-        text.setText('');
-        text.setData('drug', null);
-      }
-    });
-
-    // Handle input
-    this.dealerInputHandler = this.time.addEvent({
-      delay: 100,
-      callback: this.handleDealerInput,
-      callbackScope: this,
-      loop: true
-    });
-  }
-
-  handleDealerInput() {
-    if (!this.dealerMenu.visible) return;
-
-    // Close menu
-    if (Phaser.Input.Keyboard.JustDown(this.buyKeys.esc) ||
-        Phaser.Input.Keyboard.JustDown(this.buyKeys.e)) {
-      this.closeDealerMenu();
-      return;
-    }
-
-    // Buy items
-    const keys = [this.buyKeys.one, this.buyKeys.two, this.buyKeys.three, this.buyKeys.four];
-    keys.forEach((key, i) => {
-      if (Phaser.Input.Keyboard.JustDown(key)) {
-        const drug = this.dealerStockTexts[i]?.getData('drug');
-        if (drug && this.currentDealer) {
-          const result = this.currentDealer.buy(drug, 1);
-          if (result.success) {
-            this.addMessage(`Bought 1 ${DRUGS[drug].name} for $${result.totalPrice}`, '#00b894');
-            // Refresh menu
-            this.openDealerMenu(this.currentDealer);
-          } else {
-            this.addMessage(result.reason, '#e17055');
-          }
-        }
-      }
-    });
-  }
-
-  closeDealerMenu() {
-    this.dealerMenu.setVisible(false);
-    this.currentDealer = null;
-    if (this.dealerInputHandler) {
-      this.dealerInputHandler.destroy();
-    }
+  onInfamyWarning(data) {
+    this.addMessage(data.message, data.direction === 'up' ? '#8b0000' : '#228b22');
   }
 
   onSale(data) {
     this.addMessage(
-      `Sold ${data.quantity} ${DRUGS[data.drug].name} for $${data.price}`,
-      '#00b894'
+      `Sold ${data.quantity} ${WARES[data.ware].name} for ${data.price}g`,
+      '#228b22'
     );
   }
 
   onSaleFailed(data) {
-    this.addMessage(data.reason, '#e17055');
+    this.addMessage(data.reason, '#cd853f');
   }
 
-  onSafehouse(data) {
-    this.addMessage(data.message, '#00cec9');
+  onGuildhall(data) {
+    this.addMessage(`${data.message} (-${data.reduction} infamy)`, '#4682b4');
   }
 
-  onPoliceAlert(police) {
-    this.addMessage('Police spotted you!', '#d63031');
+  onGuardAlert(guard) {
+    this.addMessage('The guards have spotted you!', '#8b0000');
   }
 
-  onPlayerCaught() {
-    this.addMessage('CAUGHT! You got away but paid the price.', '#d63031');
+  onPlayerCaptured() {
+    this.addMessage('CAPTURED! You bribed your way free...', '#8b0000');
   }
 
-  onBusted() {
+  onCaptured() {
     // Game over state
     const overlay = this.add.rectangle(
       this.scale.width / 2,
@@ -397,13 +346,13 @@ export class UIScene extends Phaser.Scene {
       0.8
     );
 
-    const bustedText = this.add.text(
+    const capturedText = this.add.text(
       this.scale.width / 2,
       this.scale.height / 2 - 40,
-      'BUSTED',
+      'CAPTURED',
       {
         font: '48px Courier New',
-        fill: '#d63031'
+        fill: '#8b0000'
       }
     ).setOrigin(0.5);
 
@@ -413,12 +362,62 @@ export class UIScene extends Phaser.Scene {
       'Press SPACE to restart',
       {
         font: '14px Courier New',
-        fill: '#ffffff'
+        fill: '#f5f0e1'
       }
     ).setOrigin(0.5);
 
     // Restart handler
     this.input.keyboard.once('keydown-SPACE', () => {
+      this.scene.stop('GameScene');
+      this.scene.stop('UIScene');
+      this.scene.start('BootScene');
+    });
+  }
+
+  onPlayerDamaged(data) {
+    // show a temporary health bar above player's head
+    const cam = this.gameScene.cameras.main;
+    const screenX = Math.round(data.x - cam.scrollX);
+    const screenY = Math.round(data.y - cam.scrollY) - 28;
+
+    const width = 48;
+    const bg = this.add.rectangle(screenX - width/2, screenY, width, 8, 0x2a2418, 0.8).setOrigin(0,0.5);
+    const fillW = Math.max(0, Math.floor((data.health / data.maxHealth) * width));
+    const fill = this.add.rectangle(screenX - width/2, screenY, fillW, 6, 0xb22222).setOrigin(0,0.5);
+
+    // Fade out after 1.5s
+    this.tweens.add({
+      targets: [bg, fill],
+      alpha: { value: 0, ease: 'Linear', duration: 400 },
+      delay: 1500,
+      onComplete: () => { bg.destroy(); fill.destroy(); }
+    });
+  }
+
+  onPlayerDied(data) {
+    this.addMessage('You have fallen!', '#8b0000');
+    // Fullscreen overlay
+    const overlay = this.add.rectangle(
+      this.scale.width / 2,
+      this.scale.height / 2,
+      this.scale.width,
+      this.scale.height,
+      0x000000,
+      0.7
+    );
+
+    const text = this.add.text(this.scale.width / 2, this.scale.height / 2 - 20, 'YOU HAVE FALLEN', {
+      font: '36px Courier New',
+      fill: '#b22222'
+    }).setOrigin(0.5);
+
+    const hint = this.add.text(this.scale.width / 2, this.scale.height / 2 + 30, 'Press SPACE to restart', {
+      font: '14px Courier New',
+      fill: '#f5f0e1'
+    }).setOrigin(0.5);
+
+    this.input.keyboard.once('keydown-SPACE', () => {
+      overlay.destroy(); text.destroy(); hint.destroy();
       this.scene.stop('GameScene');
       this.scene.stop('UIScene');
       this.scene.start('BootScene');

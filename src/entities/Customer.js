@@ -142,7 +142,7 @@ export class Customer {
 
   leaveAngry() {
     // Missed opportunity - slight heat increase (suspicious behavior)
-    this.scene.heatSystem.add(1, 'suspicious_lingering');
+    if (this.scene.heatSystem) this.scene.heatSystem.add(1, 'suspicious_lingering');
 
     this.scene.tweens.add({
       targets: this.sprite,

@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 5 npm run dev:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node --check:*)",
+      "Bash(node -e:*)",
+      "Bash(timeout 8 npm run dev:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)"
+    ]
+  }
+}

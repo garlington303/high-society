@@ -48,6 +48,90 @@ export class Dealer {
     this.sprite.setData('entity', this);
     this.sprite.body.setImmovable(true);
 
+    // Ensure dealer isn't placed in an unreachable location relative to the player.
+    // If unreachable, try to relocate to the nearest reachable sidewalk spot.
+    try {
+      const pathfinding = scene.pathfinding;
+      const player = scene.player;
+      if (pathfinding && player) {
+        const startTile = pathfinding.worldToTile(player.sprite.x, player.sprite.y);
+        const tgtTile = pathfinding.worldToTile(this.sprite.x, this.sprite.y);
+
+        const reachable = (() => {
+          if (!startTile) return false;
+          const w = pathfinding.width;
+          const h = pathfinding.height;
+          const visited = new Uint8Array(w * h);
+          const q = [];
+          q.push({ x: startTile.x, y: startTile.y });
+          visited[startTile.y * w + startTile.x] = 1;
+          const dirs = [ {dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0} ];
+          const maxSteps = 20000;
+          let steps = 0;
+          while (q.length > 0 && steps < maxSteps) {
+            const cur = q.shift();
+            steps++;
+            if (cur.x === tgtTile.x && cur.y === tgtTile.y) return true;
+            for (const d of dirs) {
+              const nx = cur.x + d.dx;
+              const ny = cur.y + d.dy;
+              if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+              const idx = ny * w + nx;
+              if (visited[idx]) continue;
+              visited[idx] = 1;
+              if (nx === tgtTile.x && ny === tgtTile.y) return true;
+              if (pathfinding.isWalkable(nx, ny)) q.push({ x: nx, y: ny });
+            }
+          }
+          return false;
+        })();
+
+        if (!reachable) {
+          // Find candidate sidewalk tiles and pick the nearest reachable one
+          const sidewalks = scene.cityGenerator.getSidewalkTiles();
+          let chosen = null;
+          for (const s of sidewalks) {
+            const st = pathfinding.worldToTile(s.x, s.y);
+            // BFS from player to st (cheapening by early exit)
+            const w = pathfinding.width;
+            const h = pathfinding.height;
+            const visited = new Uint8Array(w * h);
+            const q = [];
+            q.push({ x: startTile.x, y: startTile.y });
+            visited[startTile.y * w + startTile.x] = 1;
+            const dirs = [ {dx:0,dy:-1}, {dx:0,dy:1}, {dx:-1,dy:0}, {dx:1,dy:0} ];
+            const maxSteps = 5000;
+            let steps = 0;
+            let ok = false;
+            while (q.length > 0 && steps < maxSteps) {
+              const cur = q.shift();
+              steps++;
+              if (cur.x === st.x && cur.y === st.y) { ok = true; break; }
+              for (const d of dirs) {
+                const nx = cur.x + d.dx;
+                const ny = cur.y + d.dy;
+                if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+                const idx = ny * w + nx;
+                if (visited[idx]) continue;
+                visited[idx] = 1;
+                if (nx === st.x && ny === st.y) { ok = true; break; }
+                if (pathfinding.isWalkable(nx, ny)) q.push({ x: nx, y: ny });
+              }
+            }
+            if (ok) { chosen = s; break; }
+          }
+
+          if (chosen) {
+            this.sprite.x = chosen.x;
+            this.sprite.y = chosen.y;
+          }
+        }
+      }
+    } catch (e) {
+      // Non-fatal; just skip relocation on error
+      // console.warn('Dealer relocation check failed', e);
+    }
+
     // Restock timer
     this.restockTimer = 0;
   }
@@ -133,7 +217,7 @@ export class Dealer {
 
     // Heat from transaction
     const heatGain = Math.ceil(DRUGS[drug].heatGain * 0.5);
-    this.scene.heatSystem.add(heatGain, 'purchase');
+    if (this.scene.heatSystem) this.scene.heatSystem.add(heatGain, 'purchase');
 
     return {
       success: true,
@@ -141,6 +225,37 @@ export class Dealer {
       quantity,
       totalPrice,
       heatGain
+    };
+  }
+
+  sell(drug, quantity) {
+    const inventory = this.scene.registry.get('inventory');
+
+    if (!inventory[drug] || inventory[drug] < quantity) {
+      return { success: false, reason: "You don't have that much" };
+    }
+
+    // Dealers buy at 60% of their selling price
+    const buybackRate = 0.6;
+    const pricePerUnit = Math.floor(this.prices[drug] * buybackRate);
+    const totalPrice = pricePerUnit * quantity;
+
+    // Execute transaction
+    inventory[drug] -= quantity;
+    this.scene.registry.set('inventory', inventory);
+
+    const money = this.scene.registry.get('money');
+    this.scene.registry.set('money', money + totalPrice);
+
+    // Add to dealer's inventory
+    this.inventory[drug] = (this.inventory[drug] || 0) + quantity;
+
+    return {
+      success: true,
+      drug,
+      quantity,
+      totalPrice,
+      pricePerUnit
     };
   }
 }
