@@ -39,6 +39,12 @@ export class BootScene extends Phaser.Scene {
 
     // Generate remaining placeholder sprites
     generateSprites(this);
+
+    // Optional ambient audio (non-fatal if file missing)
+    // Provide both ogg and mp3 fallbacks; if files are absent Phaser will skip playback later
+    try {
+      this.load.audio('ambient_loop', ['assets/audio/ambient_loop.ogg', 'assets/audio/ambient_loop.mp3']);
+    } catch (e) {}
   }
 
   create() {

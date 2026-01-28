@@ -139,6 +139,16 @@ export class GameScene extends Phaser.Scene {
     // Current interaction target
     this.currentInteraction = null;
 
+    // Play ambient audio loop if it was loaded in BootScene
+    try {
+      if (this.cache && this.cache.audio && this.cache.audio.exists && this.cache.audio.exists('ambient_loop')) {
+        this.ambient = this.sound.add('ambient_loop', { loop: true, volume: 0.45 });
+        // small fade-in to avoid abruptness
+        this.ambient.play();
+        try { this.tweens.add({ targets: this.ambient, volume: { value: 0.55, duration: 800 } }); } catch (e) {}
+      }
+    } catch (e) {}
+
     // Footstep particle helper: create a tiny dust texture if missing
     try {
       const texName = 'fx_dust';
