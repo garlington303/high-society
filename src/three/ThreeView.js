@@ -22,6 +22,12 @@ export class ThreeView {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
 
+    // Camera smoothing/lag configuration
+    this.cameraTarget = new THREE.Vector3();
+    this.cameraLerp = 0.12; // base lerp factor per ~16ms frame
+    this.cameraLagFactor = 0.35; // how far ahead to look based on player velocity (in Three units)
+    this.cameraShake = { amp: 0, time: 0 };
+
     // Basic lighting
     const ambient = new THREE.AmbientLight(0xffffff, 0.8);
     this.scene.add(ambient);
@@ -245,34 +251,40 @@ export class ThreeView {
     // Position camera at player's eye height
     const eyeHeight = 0.9;
     // If pointer-lock active, use yaw/pitch for camera orientation
-    if (this.pointerLocked) {
-      const camX = this.playerMesh.position.x;
-      const camY = eyeHeight;
-      const camZ = this.playerMesh.position.z;
-      this.camera.position.set(camX, camY, camZ);
+    // Smooth camera follow with slight lag based on player velocity
+    {
+      const px = this.playerMesh.position.x;
+      const pz = this.playerMesh.position.z;
 
-      // Compute forward vector from yaw/pitch
-      const fx = Math.cos(this.pitch) * Math.sin(this.yaw);
-      const fz = Math.cos(this.pitch) * Math.cos(this.yaw);
-      const fy = Math.sin(this.pitch);
-      const look = new THREE.Vector3(camX + fx, camY + fy, camZ + fz);
-      this.camera.lookAt(look);
-    } else {
-      // Non-locked: point camera forward based on player.direction
-      const camX = this.playerMesh.position.x;
-      const camY = eyeHeight;
-      const camZ = this.playerMesh.position.z + 0.1;
-      this.camera.position.set(camX, camY, camZ);
-      const dir = player.direction || 'down';
-      const forward = { x: 0, z: 0 };
-      switch (dir) {
-        case 'up': forward.z = -1; break;
-        case 'down': forward.z = 1; break;
-        case 'left': forward.x = -1; break;
-        case 'right': forward.x = 1; break;
-        default: forward.z = 1; break;
-      }
-      const lookAt = new THREE.Vector3(this.playerMesh.position.x + forward.x, camY, this.playerMesh.position.z + forward.z);
+      // Read Phaser velocity (safe access)
+      let vx = 0;
+      let vy = 0;
+      try {
+        if (player.sprite && player.sprite.body && player.sprite.body.velocity) {
+          vx = player.sprite.body.velocity.x || 0;
+          vy = player.sprite.body.velocity.y || 0;
+        }
+      } catch (e) {}
+
+      // Convert Phaser pixels velocity to Three units and apply lag factor
+      const aheadX = vx * this.scaleFactor * this.cameraLagFactor;
+      const aheadZ = vy * this.scaleFactor * this.cameraLagFactor;
+
+      // Desired camera target (slightly ahead in movement direction)
+      const desiredX = px + aheadX;
+      const desiredY = eyeHeight;
+      const desiredZ = pz + aheadZ + 0.05; // small offset so camera isn't exactly centered
+      this.cameraTarget.set(desiredX, desiredY, desiredZ);
+
+      // Compute lerp alpha based on delta (delta is likely ms from Phaser)
+      const frame = Math.max(1, delta || 16);
+      const alpha = Math.min(1, this.cameraLerp * (frame / 16));
+
+      // Lerp camera position towards target
+      this.camera.position.lerp(this.cameraTarget, alpha);
+
+      // Compute look target (slightly forward of player)
+      const lookAt = new THREE.Vector3(px + aheadX, desiredY, pz + aheadZ + 0.2);
       this.camera.lookAt(lookAt);
     }
 
