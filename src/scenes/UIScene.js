@@ -442,13 +442,14 @@ export class UIScene extends Phaser.Scene {
       delay: 1500,
       onComplete: () => { bg.destroy(); fill.destroy(); }
     });
-  }
+
     // Camera shake to emphasize impact
     try {
       if (this.gameScene && this.gameScene.cameras && this.gameScene.cameras.main) {
         this.gameScene.cameras.main.shake(200, 0.01);
       }
     } catch (e) {}
+  }
 
   onPlayerDied(data) {
     this.addMessage('You have fallen!', '#8b0000');
