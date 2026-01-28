@@ -59,17 +59,35 @@ export class GameScene extends Phaser.Scene {
     // Mouse wheel -> zoom towards pointer
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
       const cam = this.cameras.main;
-      // World point under cursor before zoom
-      const before = cam.getWorldPoint(pointer.x, pointer.y);
+      const cam = this.cameras.main;
+      // Cancel existing camera zoom tween if running
+      try { if (this.cameraZoomTween) this.cameraZoomTween.stop(); } catch (e) {}
 
-      // Compute new zoom (scroll down positive -> zoom out)
-      const newZoom = Phaser.Math.Clamp(cam.zoom - deltaY * this.cameraZoomSensitivity, this.minCameraZoom, this.maxCameraZoom);
-      cam.setZoom(newZoom);
+      // World point under cursor before zoom (keep constant)
+      const worldUnderPointer = cam.getWorldPoint(pointer.x, pointer.y);
 
-      // World point under cursor after zoom; shift camera so pointer stays focused
-      const after = cam.getWorldPoint(pointer.x, pointer.y);
-      cam.scrollX += (before.x - after.x);
-      cam.scrollY += (before.y - after.y);
+      // Compute clamped target zoom
+      const targetZoom = Phaser.Math.Clamp(cam.zoom - deltaY * this.cameraZoomSensitivity, this.minCameraZoom, this.maxCameraZoom);
+      if (Math.abs(targetZoom - cam.zoom) < 0.001) return;
+
+      // Tween an object and apply zoom on update while preserving pointer focus
+      const zoomObj = { z: cam.zoom };
+      this.cameraZoomTween = this.tweens.add({
+        targets: zoomObj,
+        z: targetZoom,
+        duration: 300,
+        ease: 'Cubic.easeOut',
+        onUpdate: () => {
+          try {
+            // setZoom then adjust scroll so the world point under the pointer remains the same
+            cam.setZoom(zoomObj.z);
+            const after = cam.getWorldPoint(pointer.x, pointer.y);
+            cam.scrollX += (worldUnderPointer.x - after.x);
+            cam.scrollY += (worldUnderPointer.y - after.y);
+          } catch (e) {}
+        },
+        onComplete: () => { this.cameraZoomTween = null; }
+      });
     });
 
     // Input
