@@ -142,6 +142,27 @@ export class GameScene extends Phaser.Scene {
       });
       this.lastFootstepTime = 0;
     } catch (e) {}
+
+    // Sale particle burst emitter (brighter, larger)
+    try {
+      const saleTex = 'fx_sale';
+      if (!this.textures.exists(saleTex)) {
+        const g2 = this.add.graphics();
+        g2.fillStyle(0xffd54f, 1);
+        g2.fillCircle(5, 5, 5);
+        g2.generateTexture(saleTex, 10, 10);
+        g2.destroy();
+      }
+      this.saleParticles = this.add.particles('fx_sale');
+      this.saleEmitter = this.saleParticles.createEmitter({
+        speed: { min: 40, max: 120 },
+        lifespan: 700,
+        quantity: 0,
+        scale: { start: 1.0, end: 0.3 },
+        alpha: { start: 1.0, end: 0 },
+        rotate: { min: 0, max: 360 }
+      });
+    } catch (e) {}
   }
 
   setupCollisions() {
@@ -240,6 +261,17 @@ export class GameScene extends Phaser.Scene {
     finalSpots.forEach((spot, i) => {
       const alchemist = new Alchemist(this, spot.x, spot.y, i);
       this.alchemists.add(alchemist.sprite);
+      // subtle idle bobbing (scale) to make NPCs feel alive
+      try {
+        this.tweens.add({
+          targets: alchemist.sprite,
+          scaleX: { value: alchemist.sprite.scaleX * 1.03, duration: 1200, ease: 'Sine.easeInOut' },
+          scaleY: { value: alchemist.sprite.scaleY * 1.03, duration: 1200, ease: 'Sine.easeInOut' },
+          yoyo: true,
+          repeat: -1,
+          delay: Phaser.Math.RND.between(0, 400)
+        });
+      } catch (e) {}
     });
   }
 
@@ -262,6 +294,17 @@ export class GameScene extends Phaser.Scene {
       if (spot) {
         const villager = new Villager(this, spot.x, spot.y);
         this.villagers.add(villager.sprite);
+        // subtle idle bobbing (scale)
+        try {
+          this.tweens.add({
+            targets: villager.sprite,
+            scaleX: { value: villager.sprite.scaleX * 1.03, duration: 1200 + Phaser.Math.RND.between(-300,300), ease: 'Sine.easeInOut' },
+            scaleY: { value: villager.sprite.scaleY * 1.03, duration: 1200 + Phaser.Math.RND.between(-300,300), ease: 'Sine.easeInOut' },
+            yoyo: true,
+            repeat: -1,
+            delay: Phaser.Math.RND.between(0, 500)
+          });
+        } catch (e) {}
       }
     }
   }
@@ -288,6 +331,17 @@ export class GameScene extends Phaser.Scene {
       if (spot) {
         const patron = new Patron(this, spot.x, spot.y);
         this.patrons.add(patron.sprite);
+        // subtle bobbing for patron while waiting
+        try {
+          this.tweens.add({
+            targets: patron.sprite,
+            scaleX: { value: patron.sprite.scaleX * 1.03, duration: 1200, ease: 'Sine.easeInOut' },
+            scaleY: { value: patron.sprite.scaleY * 1.03, duration: 1200, ease: 'Sine.easeInOut' },
+            yoyo: true,
+            repeat: -1,
+            delay: Phaser.Math.RND.between(0, 400)
+          });
+        } catch (e) {}
       }
     }
   }
@@ -443,9 +497,11 @@ export class GameScene extends Phaser.Scene {
     if (result.success) {
       patron.purchase();
       this.events.emit('sale', result);
-      // brief particle burst to reinforce sale feedback
+      // celebratory particle burst for sale
       try {
-        if (this.footstepEmitter && this.footstepParticles) {
+        if (this.saleEmitter && this.saleParticles) {
+          this.saleEmitter.explode(18, patron.x, patron.y);
+        } else if (this.footstepEmitter) {
           this.footstepEmitter.explode(6, patron.x, patron.y);
         }
       } catch (e) {}

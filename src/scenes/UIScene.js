@@ -9,6 +9,18 @@ export class UIScene extends Phaser.Scene {
   create() {
     this.gameScene = this.scene.get('GameScene');
 
+    // Day/Night tint overlay (behind UI elements in this scene)
+    try {
+      this.dayNightTint = this.add.rectangle(
+        this.scale.width / 2,
+        this.scale.height / 2,
+        this.scale.width,
+        this.scale.height,
+        0x001133,
+        0
+      ).setOrigin(0.5).setDepth(-5);
+    } catch (e) {}
+
     // UI styling - medieval fantasy theme
     this.style = {
       font: '12px Courier New',
@@ -241,6 +253,16 @@ export class UIScene extends Phaser.Scene {
     } else {
       this.infamyFill.setFillStyle(0x8b0000);
     }
+
+    // Day/night tint: simple thresholds for now
+    try {
+      const time = this.registry.get('time') || 12;
+      let alpha = 0;
+      if (time >= 20 || time < 6) alpha = 0.36;
+      else if (time >= 18 || time < 8) alpha = 0.12;
+      else alpha = 0;
+      if (this.dayNightTint) this.dayNightTint.setAlpha(alpha);
+    } catch (e) {}
 
     // Inventory (icon + count)
     const inventory = this.registry.get('inventory') || {};

@@ -66,13 +66,13 @@ export class Vehicle {
 
     if (this.scene.textures.exists(baseTex)) {
       this.sprite.setTexture(baseTex);
-      // rotate 90 degrees for horizontal directions
+      // rotate 90 degrees for horizontal directions — set targetAngle for smooth interpolation
       if (this.direction === 'left') {
-        this.sprite.setAngle(-90);
+        this.targetAngle = -90;
       } else if (this.direction === 'right') {
-        this.sprite.setAngle(90);
+        this.targetAngle = 90;
       } else {
-        this.sprite.setAngle(0);
+        this.targetAngle = 0;
       }
       this.sprite.setFlip(false, false);
       return;
@@ -134,6 +134,16 @@ export class Vehicle {
 
     // Ensure sprite orientation/texture is correct for current direction
     this.updateSpriteOrientation();
+
+    // Smoothly interpolate angle toward targetAngle when using rotated fallback
+    try {
+      if (this.targetAngle === undefined) this.targetAngle = this.sprite.angle || 0;
+      const current = this.sprite.angle || 0;
+      const diff = Phaser.Math.Angle.ShortestBetween(current, this.targetAngle);
+      const alpha = Math.min(1, 0.12 * (delta / 16));
+      const newAngle = current + diff * alpha;
+      this.sprite.setAngle(newAngle);
+    } catch (e) {}
   }
 
   updateDriving(delta) {
