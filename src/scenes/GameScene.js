@@ -48,7 +48,13 @@ export class GameScene extends Phaser.Scene {
 
     // Camera follow
     this.cameras.main.setBounds(0, 0, this.worldWidth, this.worldHeight);
-    this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
+    // Start follow with moderate lerp; we'll apply a small lookahead offset for smoother centering
+    this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12, 0, -24);
+
+    // Camera smoothing/lookahead settings
+    this.cameraFollowLerp = 0.14; // base lerp for offset smoothing
+    this.cameraLookaheadFactor = 0.02; // multiplier from player velocity -> pixels of lookahead
+    this.cameraBaseYOffset = -24; // vertical base offset so player sits lower on screen
 
     // Camera zoom settings
     this.minCameraZoom = 0.5;
@@ -416,6 +422,24 @@ export class GameScene extends Phaser.Scene {
   update(time, delta) {
     // Update player
     this.player.update(this.cursors, this.keys, delta);
+
+    // Smooth camera lookahead: nudge follow offset slightly toward movement direction
+    try {
+      const cam = this.cameras.main;
+      if (cam && this.player && this.player.sprite && this.player.sprite.body) {
+        const vx = this.player.sprite.body.velocity.x || 0;
+        const vy = this.player.sprite.body.velocity.y || 0;
+        const desiredX = vx * this.cameraLookaheadFactor;
+        // Keep vertical lookahead smaller to keep horizon stable
+        const desiredY = this.cameraBaseYOffset + vy * this.cameraLookaheadFactor * 0.25;
+        const curX = (cam.followOffset && cam.followOffset.x) || 0;
+        const curY = (cam.followOffset && cam.followOffset.y) || 0;
+        const frameAlpha = Math.min(1, this.cameraFollowLerp * (delta / 16));
+        const nx = Phaser.Math.Interpolation.Linear([curX, desiredX], frameAlpha);
+        const ny = Phaser.Math.Interpolation.Linear([curY, desiredY], frameAlpha);
+        cam.setFollowOffset(nx, ny);
+      }
+    } catch (e) {}
 
     // Update all entities
     this.villagers.getChildren().forEach(v => {
