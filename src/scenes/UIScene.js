@@ -310,6 +310,21 @@ export class UIScene extends Phaser.Scene {
 
   onInfamyWarning(data) {
     this.addMessage(data.message, data.direction === 'up' ? '#8b0000' : '#228b22');
+    // Pulse the infamy meter to draw attention
+    try {
+      if (this.infamyBg) {
+        if (this.infamyTween) this.infamyTween.stop();
+        this.infamyBg.setScale(1,1);
+        this.infamyTween = this.tweens.add({
+          targets: this.infamyBg,
+          scaleX: { value: 1.06, duration: 120, ease: 'Cubic.easeOut' },
+          scaleY: { value: 1.06, duration: 120, ease: 'Cubic.easeOut' },
+          yoyo: true,
+          repeat: 0,
+          onComplete: () => { this.infamyTween = null; }
+        });
+      }
+    } catch (e) {}
   }
 
   onSale(data) {
@@ -317,6 +332,19 @@ export class UIScene extends Phaser.Scene {
       `Sold ${data.quantity} ${WARES[data.ware].name} for ${data.price}g`,
       '#228b22'
     );
+    // Flash the inventory slot for the ware sold
+    try {
+      const item = this.invItems.find(i => i.ware === data.ware);
+      if (item) {
+        this.tweens.add({
+          targets: [item.icon, item.amount],
+          scaleX: { value: 1.4, duration: 120, ease: 'Cubic.easeOut' },
+          scaleY: { value: 1.4, duration: 120, ease: 'Cubic.easeOut' },
+          yoyo: true,
+          repeat: 0
+        });
+      }
+    } catch (e) {}
   }
 
   onSaleFailed(data) {
@@ -393,6 +421,12 @@ export class UIScene extends Phaser.Scene {
       onComplete: () => { bg.destroy(); fill.destroy(); }
     });
   }
+    // Camera shake to emphasize impact
+    try {
+      if (this.gameScene && this.gameScene.cameras && this.gameScene.cameras.main) {
+        this.gameScene.cameras.main.shake(200, 0.01);
+      }
+    } catch (e) {}
 
   onPlayerDied(data) {
     this.addMessage('You have fallen!', '#8b0000');

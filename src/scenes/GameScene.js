@@ -120,6 +120,28 @@ export class GameScene extends Phaser.Scene {
 
     // Current interaction target
     this.currentInteraction = null;
+
+    // Footstep particle helper: create a tiny dust texture if missing
+    try {
+      const texName = 'fx_dust';
+      if (!this.textures.exists(texName)) {
+        const g = this.add.graphics();
+        g.fillStyle(0xcccccc, 1);
+        g.fillCircle(4, 4, 4);
+        g.generateTexture(texName, 8, 8);
+        g.destroy();
+      }
+      this.footstepParticles = this.add.particles('fx_dust');
+      this.footstepEmitter = this.footstepParticles.createEmitter({
+        speed: { min: 10, max: 40 },
+        lifespan: 400,
+        quantity: 0,
+        scale: { start: 0.9, end: 0.2 },
+        alpha: { start: 0.9, end: 0 },
+        rotate: { min: 0, max: 360 }
+      });
+      this.lastFootstepTime = 0;
+    } catch (e) {}
   }
 
   setupCollisions() {
@@ -342,6 +364,12 @@ export class GameScene extends Phaser.Scene {
     this.currentInteraction = null;
     this.interactionPrompt.setVisible(false);
 
+    // Clear previous highlights
+    try {
+      this.alchemists.getChildren().forEach(a => { if (a && a.setTint) { a.clearTint(); a.setScale(1); } });
+      this.patrons.getChildren().forEach(p => { if (p && p.setTint) { p.clearTint(); p.setScale(1); } });
+    } catch (e) {}
+
     const playerPos = this.player.sprite;
     const interactRange = 32;
 
@@ -354,6 +382,8 @@ export class GameScene extends Phaser.Scene {
         this.currentInteraction = { type: 'alchemist', entity: a.getData('entity') };
         this.interactionPrompt.setPosition(a.x, a.y - 20);
         this.interactionPrompt.setVisible(true);
+        // highlight
+        try { a.setTint(0xffffaa); a.setScale(1.08); } catch (e) {}
       }
     });
 
@@ -366,6 +396,8 @@ export class GameScene extends Phaser.Scene {
         this.currentInteraction = { type: 'patron', entity: p.getData('entity') };
         this.interactionPrompt.setPosition(p.x, p.y - 20);
         this.interactionPrompt.setVisible(true);
+        // highlight
+        try { p.setTint(0xffffaa); p.setScale(1.08); } catch (e) {}
       }
     });
 
@@ -411,6 +443,12 @@ export class GameScene extends Phaser.Scene {
     if (result.success) {
       patron.purchase();
       this.events.emit('sale', result);
+      // brief particle burst to reinforce sale feedback
+      try {
+        if (this.footstepEmitter && this.footstepParticles) {
+          this.footstepEmitter.explode(6, patron.x, patron.y);
+        }
+      } catch (e) {}
       // Add infamy for the sale
       if (result.infamyGain > 0) {
         this.infamySystem.add(result.infamyGain, 'contraband_sale');
@@ -418,6 +456,20 @@ export class GameScene extends Phaser.Scene {
     } else {
       this.events.emit('saleFailed', result);
     }
+  }
+
+  // Helper to emit a single footstep particle or small burst
+  emitFootstep(x, y, strong = false) {
+    try {
+      const now = Date.now();
+      const minDelay = strong ? 80 : 200;
+      if (now - (this.lastFootstepTime || 0) < minDelay) return;
+      this.lastFootstepTime = now;
+      if (this.footstepEmitter) {
+        const count = strong ? 2 : 1;
+        this.footstepEmitter.explode(count, x, y);
+      }
+    } catch (e) {}
   }
 
   enterGuildhall(guildhall) {

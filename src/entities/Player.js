@@ -95,6 +95,12 @@ export class Player {
       const walkFrame = Math.floor(Date.now() / 200) % 2;
       const texKey = walkFrame === 0 ? `player_${this.direction}` : `player_${this.direction}_walk`;
       this.sprite.setTexture(texKey);
+      // Emit footstep particle via scene helper (throttled)
+      try {
+        if (this.scene && typeof this.scene.emitFootstep === 'function') {
+          this.scene.emitFootstep(this.sprite.x, this.sprite.y, this.isSprinting);
+        }
+      } catch (e) {}
     } else {
       this.isMoving = false;
       this.sprite.setTexture(`player_${this.direction}`);
