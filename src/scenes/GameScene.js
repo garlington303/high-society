@@ -65,7 +65,6 @@ export class GameScene extends Phaser.Scene {
     // Mouse wheel -> zoom towards pointer
     this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY, deltaZ) => {
       const cam = this.cameras.main;
-      const cam = this.cameras.main;
       // Cancel existing camera zoom tween if running
       try { if (this.cameraZoomTween) this.cameraZoomTween.stop(); } catch (e) {}
 
