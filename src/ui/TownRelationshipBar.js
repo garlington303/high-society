@@ -31,10 +31,11 @@ export class TownRelationshipBar extends Phaser.GameObjects.Container {
     // Initial update
     this.updateFromRegistry();
 
-    // Listen for registry events
-    this.scene.registry.events.on('infamyChanged', () => this.updateFromRegistry());
-    this.scene.registry.events.on('fameChanged', () => this.updateFromRegistry());
-    this.scene.registry.events.on('townResourcesChanged', () => this.updateFromRegistry());
+    // Listen for registry events. Register with context so the handler
+    // is called with the correct `this` and avoid arrow-capture edge cases.
+    this.scene.registry.events.on('infamyChanged', this.updateFromRegistry, this);
+    this.scene.registry.events.on('fameChanged', this.updateFromRegistry, this);
+    this.scene.registry.events.on('townResourcesChanged', this.updateFromRegistry, this);
   }
 
   buildPanel() {
@@ -162,6 +163,9 @@ export class TownRelationshipBar extends Phaser.GameObjects.Container {
   }
 
   updateFromRegistry() {
+    // Guard: if the scene or registry is not available (scene destroyed
+    // or object partially torn down), bail out to avoid uncaught errors.
+    if (!this.scene || !this.scene.registry) return;
     // Use the single persistent main town's fame if available, fallback to global fame
     const mainTownId = this.scene.registry.get('mainTownId') || this.scene.registry.get('currentTownId') || 'haven';
     const towns = this.scene.registry.get('townRelations') || {};
