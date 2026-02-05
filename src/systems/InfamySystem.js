@@ -23,6 +23,25 @@ export class InfamySystem {
     this.infamyLog = [];
   }
 
+  // --- Town-scoped infamy support ---
+  getTownInfamy(townId) {
+    const towns = this.scene.registry.get('townInfamy') || {};
+    return towns[townId] || 0;
+  }
+
+  setTownInfamy(townId, value) {
+    const towns = this.scene.registry.get('townInfamy') || {};
+    towns[townId] = Math.max(0, Math.min(this.scene.registry.get('maxInfamy') || 100, value));
+    this.scene.registry.set('townInfamy', towns);
+    this.scene.events.emit('townInfamyChanged', { townId, value: towns[townId] });
+  }
+
+  addTownInfamy(townId, amount, source) {
+    const cur = this.getTownInfamy(townId);
+    this.setTownInfamy(townId, cur + amount);
+    this.scene.events.emit('infamyChanged', { infamy: this.scene.registry.get('infamy'), change: amount, source, townId });
+  }
+
   add(amount, source) {
     const currentInfamy = this.scene.registry.get('infamy');
     const maxInfamy = this.scene.registry.get('maxInfamy');
@@ -44,8 +63,8 @@ export class InfamySystem {
       this.infamyLog.shift();
     }
 
-    // Emit event for UI
-    this.scene.events.emit('infamyChanged', {
+    // Emit event for UI on registry.events so UIScene listeners receive it
+    this.scene.registry.events.emit('infamyChanged', {
       infamy: newInfamy,
       change: amount,
       source
@@ -53,6 +72,14 @@ export class InfamySystem {
 
     // Check for threshold crossings
     this.checkThresholds(currentInfamy, newInfamy);
+
+    // Also apply to current town's local infamy if a town exists
+    try {
+      const currentTown = this.scene.registry.get('currentTownId');
+      if (currentTown && typeof this.addTownInfamy === 'function') {
+        this.addTownInfamy(currentTown, amount, source);
+      }
+    } catch (e) {}
   }
 
   reduce(amount) {
@@ -60,7 +87,8 @@ export class InfamySystem {
     const newInfamy = Math.max(currentInfamy - amount, 0);
     this.scene.registry.set('infamy', newInfamy);
 
-    this.scene.events.emit('infamyChanged', {
+    // Emit on registry.events so UIScene listeners receive it
+    this.scene.registry.events.emit('infamyChanged', {
       infamy: newInfamy,
       change: -amount,
       source: 'cooldown'

@@ -1,108 +1,98 @@
 # High Society
 
-A gritty top-down 2D crime simulator emphasizing tension, emergent systems, and street-level decision-making.
+Top-down fantasy / crime-adjacent simulator focused on exploration, extraction, and contained bullet-hell combat.
 
-## Vision
+This repository contains a playable prototype built with Phaser and Three, served with Vite.
 
-We are building a pure top-down (90°), old-school GTA / Chinatown Wars–inspired crime simulator focused on **logistics, heat, and survival** — not combat mastery.
+## Core Design
 
-The player is a low-level criminal operator navigating a hostile city where every action increases visibility. Combat is fast, directional, and intentionally unrewarding; prolonged fights mean the player has already failed strategically.
+- Core loop: Prepare in town → Plan route/objectives → Explore overworld/dungeon → Enter high-risk combat zones → Gain temporary power → Decide when to extract → Return home → Convert progress into permanence
 
-### Core Design Pillars
+See the full living Game Design Document at [top_down_fantasy_rpg_gdd.md](top_down_fantasy_rpg_gdd.md).
 
-- **Heat as Currency**: Every action has a cost in visibility. The city remembers.
-- **Indirect Progression**: Safer routes, better information, intermediaries — not raw power.
-- **Risk/Reward Tension**: Push for more profit or extract early?
-- **Readable Aesthetics**: 4-directional sprites, no rotation, minimal animation states.
+## Quickstart
 
-## Getting Started
+Prerequisites:
+- Node.js (16+ recommended)
+- npm (or yarn)
+
+Install dependencies:
 
 ```bash
-# Install dependencies
 npm install
+```
 
-# Run development server
+Run development server (Vite):
+
+```bash
 npm run dev
+```
 
-# Build for production
+Build for production:
+
+```bash
 npm run build
 ```
 
-## Controls
+Preview built site locally:
 
-| Key | Action |
-|-----|--------|
-| WASD / Arrows | Move |
-| SHIFT | Sprint (generates heat over time) |
-| E | Interact with dealers/customers/safehouses |
-| 1-4 | Buy items in dealer menu |
-| ESC | Close menus |
-
-## Game Systems
-
-### Heat System
-
-Heat is your visibility to law enforcement. It accumulates through actions and decays slowly.
-
-| Level | Heat | Effect |
-|-------|------|--------|
-| Safe | 0-20 | Police ignore you |
-| Suspicious | 21-40 | Police may investigate |
-| Wanted | 41-60 | Police actively looking |
-| Hot | 61-80 | Police chase on sight |
-| Hunted | 81-100 | Maximum response |
-
-### Drug Economy
-
-| Product | Buy | Sell | Risk |
-|---------|-----|------|------|
-| Weed | ~$20 | ~$35 | Low |
-| Pills | ~$50 | ~$90 | Medium |
-| Coke | ~$150 | ~$280 | High |
-| Meth | ~$200 | ~$400 | Very High |
-
-### Key Locations
-
-- **Dealers** (purple): Buy product at wholesale prices
-- **Customers** (yellow, exclamation mark): Sell for profit
-- **Safe Houses** (cyan): Reduce heat significantly
-
-## Project Structure
-
-```
-src/
-├── main.js              # Game entry point
-├── scenes/
-│   ├── BootScene.js     # Asset loading
-│   ├── GameScene.js     # Main gameplay
-│   └── UIScene.js       # HUD and menus
-├── entities/
-│   ├── Player.js        # Player controller
-│   ├── Police.js        # Police AI
-│   ├── Civilian.js      # Civilian NPCs
-│   ├── Dealer.js        # Drug dealers
-│   └── Customer.js      # Buyers
-├── systems/
-│   ├── HeatSystem.js    # Wanted level management
-│   └── DrugSystem.js    # Economy and transactions
-├── world/
-│   └── CityGenerator.js # Procedural city layout
-└── utils/
-    └── SpriteGenerator.js # Placeholder graphics
+```bash
+npm run preview
 ```
 
-## Tech Stack
+## NPM Scripts
 
-- **Phaser 3** - 2D game framework
-- **Vite** - Build tool and dev server
-- **Vanilla JavaScript** - No framework overhead
+Provided by `package.json`:
+- `dev` — start Vite dev server
+- `build` — run Vite build
+- `preview` — preview built output
 
-## Next Steps
+## Stack & Dependencies
 
-- [ ] Add more police AI behaviors (patrols, investigation)
-- [ ] Implement vehicle mechanics
-- [ ] Add time-based events and missions
-- [ ] Create district system with different risk/reward profiles
-- [ ] Add save/load system
-- [ ] Sound effects and ambient audio
-- [ ] Replace placeholder sprites with AI-generated assets
+- Phaser (game engine)
+- Three (3D support / special views)
+- Vite (dev server / bundler)
+
+See `package.json` for exact versions.
+
+## Project Structure (high-level)
+
+- `index.html` — entry HTML
+- `src/` — main source code
+  - `main.js` — bootstraps scenes and game
+  - `scenes/` — Phaser scenes (`GameScene`, `OverworldScene`, `UIScene`, etc.)
+  - `entities/` — game entity classes (Player, NPCs, enemies, Projectiles)
+  - `systems/` — gameplay systems (Alchemy, Drug, Heat, Infamy)
+  - `world/` — procedural generation (`CityGenerator`, `TownGenerator`)
+  - `utils/` — helpers (Pathfinding, SpriteGenerator)
+- `assets/` — art assets and source Aseprite files
+
+## Design Notes for Developers
+
+- The authoritative design doc is `top_down_fantasy_rpg_gdd.md`. Follow its laws: progress requires returning home, combat power is temporary, dash is positioning, stamina governs dominance, extraction creates tension.
+- Dash is positional, not invulnerability. Stamina is shared and affects actions.
+- Temporary upgrades are lost on failed extraction — design accordingly.
+
+## Running & Development Tips
+
+- Use the Vite dev server for fast hot reloads.
+- Keep asset exports (Aseprite) at consistent tile sizes; see `assets/Tileset` for examples.
+- When adding new scenes, register them in `src/main.js`.
+
+## Contributing
+
+- Fork, branch, and open pull requests.
+- Keep changes minimal and focused; follow existing code style.
+- If adding features that affect game balance or tension, update `top_down_fantasy_rpg_gdd.md` and summarize the change in the PR description.
+
+## Next Steps (suggested)
+
+- Add a small automated test harness for core systems (stamina, dash recharge).
+- Add a short development checklist for art exports and level LDtk source.
+
+---
+
+If you'd like, I can:
+- add a short CONTRIBUTING.md
+- scaffold simple dev test scripts
+- add run instructions for Windows-specific workflows

@@ -1,38 +1,39 @@
 import Phaser from 'phaser';
 
 // Fantasy wares and their base properties
+// Replace specific fantasy wares with generic placeholders (Item 1..4).
 export const WARES = {
-  moonleaf: {
-    name: 'Moonleaf Tea',
+  item1: {
+    name: 'Item 1',
     basePrice: 20,
     sellPrice: 35,
-    infamyGain: 2,
-    riskLevel: 1,
-    description: 'A calming herbal brew, mildly prohibited'
+    infamyGain: 0,
+    riskLevel: 0,
+    description: 'A generic reagent'
   },
-  vigor: {
-    name: 'Vigor Elixir',
+  item2: {
+    name: 'Item 2',
     basePrice: 50,
     sellPrice: 90,
-    infamyGain: 4,
-    riskLevel: 2,
-    description: 'Stamina-enhancing potion, restricted'
+    infamyGain: 0,
+    riskLevel: 0,
+    description: 'A generic reagent'
   },
-  dragonsbreath: {
-    name: "Dragon's Breath",
+  item3: {
+    name: 'Item 3',
     basePrice: 150,
     sellPrice: 280,
-    infamyGain: 8,
-    riskLevel: 3,
-    description: 'Powerful stimulant distilled from wyrm glands'
+    infamyGain: 0,
+    riskLevel: 0,
+    description: 'A generic reagent'
   },
-  shadowbane: {
-    name: 'Shadowbane Extract',
+  item4: {
+    name: 'Item 4',
     basePrice: 200,
     sellPrice: 400,
-    infamyGain: 12,
-    riskLevel: 4,
-    description: 'Forbidden dark essence - possession means death'
+    infamyGain: 0,
+    riskLevel: 0,
+    description: 'A generic reagent'
   }
 };
 
@@ -41,6 +42,11 @@ export class Alchemist {
     this.scene = scene;
     this.direction = 'down';
     this.alchemistIndex = alchemistIndex;
+    this.merchantType = 'alchemist';
+
+    // Shop hours: black market operates at night (20:00-4:00)
+    this.openHour = 20;
+    this.closeHour = 4;
 
     // Each alchemist specializes in certain wares
     this.inventory = this.generateInventory(alchemistIndex);
@@ -141,11 +147,12 @@ export class Alchemist {
 
   generateInventory(index) {
     // Different alchemists have different stock
+    // Inventories now use generic item keys
     const inventories = [
-      { moonleaf: 10, vigor: 5 },             // Hedge witch
-      { vigor: 8, dragonsbreath: 3 },          // Back-alley brewer
-      { dragonsbreath: 5, shadowbane: 2 },     // Dark apothecary
-      { moonleaf: 15, vigor: 10, dragonsbreath: 5 }  // Major supplier
+      { item1: 10, item2: 5 },
+      { item2: 8, item3: 3 },
+      { item3: 5, item4: 2 },
+      { item1: 15, item2: 10, item3: 5 }
     ];
 
     return { ...inventories[index % inventories.length] };
@@ -195,6 +202,18 @@ export class Alchemist {
       }
     }
     return stock;
+  }
+
+  isOpen() {
+    const time = this.scene.registry.get('time') || 12;
+    // Black market is open 20:00-4:00 (overnight)
+    if (this.openHour > this.closeHour) {
+      // Overnight hours: open if time >= openHour OR time < closeHour
+      return time >= this.openHour || time < this.closeHour;
+    } else {
+      // Normal hours: open if time >= openHour AND time < closeHour
+      return time >= this.openHour && time < this.closeHour;
+    }
   }
 
   buy(ware, quantity) {

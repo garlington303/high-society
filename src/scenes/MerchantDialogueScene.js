@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { WARES } from '../entities/Alchemist.js';
+import { CONSUMABLES } from '../entities/Consumables.js';
 
 export class MerchantDialogueScene extends Phaser.Scene {
   constructor() {
@@ -8,6 +9,7 @@ export class MerchantDialogueScene extends Phaser.Scene {
 
   init(data) {
     this.alchemist = data.alchemist;
+    this.parentScene = data.parentScene || 'GameScene'; // Default to GameScene if not specified
     this.currentMenu = 'main';
     this.selectedIndex = 0;
     this.quantity = 1;
@@ -22,10 +24,10 @@ export class MerchantDialogueScene extends Phaser.Scene {
       this.scale.height,
       0x1a1510,
       0.8
-    );
+    ).setDepth(1000).setInteractive();
 
     // Main dialogue container
-    this.container = this.add.container(this.scale.width / 2, this.scale.height / 2);
+    this.container = this.add.container(this.scale.width / 2, this.scale.height / 2).setDepth(1001);
 
     // Panel background - medieval parchment style
     const panelWidth = 420;
@@ -34,8 +36,9 @@ export class MerchantDialogueScene extends Phaser.Scene {
     this.panel.setStrokeStyle(3, 0x8b7355);
     this.container.add(this.panel);
 
-    // Portrait
-    this.portrait = this.add.image(0, -110, 'alchemist_portrait');
+    // Portrait (choose variant for consumable vendor vs black market)
+    const portraitKey = (this.alchemist && this.alchemist.buyAndConsume) ? 'consumable_portrait' : 'alchemist_portrait';
+    this.portrait = this.add.image(0, -110, portraitKey);
     this.portrait.setScale(1.5);
     this.container.add(this.portrait);
 
@@ -45,6 +48,17 @@ export class MerchantDialogueScene extends Phaser.Scene {
     this.portraitFrame.setStrokeStyle(2, 0xcd853f);
     this.portraitFrame.setFillStyle(0x000000, 0);
     this.container.add(this.portraitFrame);
+
+    // Nameplate / title below portrait indicating merchant type
+    this.nameplate = this.add.container(0, -60);
+    const plateBg = this.add.rectangle(0, 0, 180, 22, 0x2f241b, 0.95);
+    plateBg.setStrokeStyle(2, 0x8b7355);
+    const plateText = this.add.text(0, 0, (this.alchemist && this.alchemist.buyAndConsume) ? 'Food & Lodging' : 'Black Market Merchant', {
+      font: '12px Courier New',
+      fill: '#ffdca6'
+    }).setOrigin(0.5);
+    this.nameplate.add([plateBg, plateText]);
+    this.container.add(this.nameplate);
 
     // Dialogue text
     this.dialogueText = this.add.text(0, -30, '', {
@@ -218,10 +232,23 @@ export class MerchantDialogueScene extends Phaser.Scene {
     this.quantity = 1;
     this.clearMenu();
 
-    const stock = this.alchemist.getAvailableStock();
-    this.stockItems = stock;
+    // Support both Alchemist-style vendors and ConsumableMerchant-style vendors
+    if (this.alchemist && typeof this.alchemist.getAvailableStock === 'function') {
+      const stock = this.alchemist.getAvailableStock();
+      this.stockItems = stock;
+    } else if (this.alchemist && typeof this.alchemist.inventory === 'object') {
+      // Consumable merchant
+      const items = [];
+      for (const [ware, amount] of Object.entries(this.alchemist.inventory)) {
+        const info = CONSUMABLES[ware] || { name: ware };
+        items.push({ ware, amount, available: amount, price: this.alchemist.prices[ware] || info.price, info });
+      }
+      this.stockItems = items;
+    } else {
+      this.stockItems = [];
+    }
 
-    if (stock.length === 0) {
+    if (!this.stockItems || this.stockItems.length === 0) {
       this.dialogueText.setText("My stores are depleted. Return another day.");
       this.instructionsText.setText('ESC: Back');
       return;
@@ -239,7 +266,8 @@ export class MerchantDialogueScene extends Phaser.Scene {
     this.stockItems.forEach((item, i) => {
       const y = i * 32;
       const isSelected = i === this.selectedIndex;
-      const totalCost = item.price * (isSelected ? this.quantity : 1);
+      const unitPrice = item.price || item.info.price || 0;
+      const totalCost = unitPrice * (isSelected ? this.quantity : 1);
       const canAfford = gold >= totalCost;
 
       let color = '#a59d8a';
@@ -248,8 +276,10 @@ export class MerchantDialogueScene extends Phaser.Scene {
       const prefix = isSelected ? '> ' : '  ';
       const qtyStr = isSelected ? ` x${this.quantity} = ${totalCost}g` : '';
 
+      const name = (item.info && item.info.name) ? item.info.name : item.ware;
+      const avail = (typeof item.amount === 'number') ? item.amount : (item.available || 0);
       const text = this.add.text(-180, y,
-        `${prefix}${item.info.name}: ${item.price}g/ea (${item.amount} avail)${qtyStr}`, {
+        `${prefix}${name}: ${unitPrice}g/ea (${avail} avail)${qtyStr}`, {
         font: '13px Courier New',
         fill: color
       });
@@ -355,15 +385,21 @@ export class MerchantDialogueScene extends Phaser.Scene {
     const item = this.stockItems[this.selectedIndex];
     if (!item) return;
 
-    const result = this.alchemist.buy(item.ware, this.quantity);
-    if (result.success) {
-      this.showMessage(`Acquired ${this.quantity} ${item.info.name} for ${result.totalPrice}g`, '#228b22');
-      // Refresh the menu
-      this.quantity = 1;
-      this.showBuyMenu();
-    } else {
-      this.showMessage(result.reason, '#cd5c5c');
+    // If merchant supports buyAndConsume (consumable merchant), perform purchase and consume
+    if (this.alchemist && typeof this.alchemist.buyAndConsume === 'function') {
+      const qty = this.quantity || 1;
+      const result = this.alchemist.buyAndConsume(item.ware, qty);
+      if (result.success) {
+        this.showMessage(`Consumed ${qty} ${item.info.name}.`, '#228b22');
+        this.showBuyMenu();
+      } else {
+        this.showMessage(result.reason || 'Purchase failed', '#cd5c5c');
+      }
+      return;
     }
+
+    // Otherwise, fallback: purchases disabled for legacy alchemists (keep UI only)
+    this.showMessage('Purchases are disabled here.', '#cd5c5c');
   }
 
   executeSell() {
@@ -412,8 +448,8 @@ export class MerchantDialogueScene extends Phaser.Scene {
     this.cameras.main.fadeOut(150, 0, 0, 0);
 
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      // Resume GameScene
-      this.scene.resume('GameScene');
+      // Resume the parent scene (GameScene or TavernScene)
+      this.scene.resume(this.parentScene);
       // Stop this scene
       this.scene.stop();
     });

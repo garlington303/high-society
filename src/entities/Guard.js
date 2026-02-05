@@ -169,6 +169,27 @@ export class Guard {
     this.state = 'patrol';
     this.isChasing = false;
     this.stateTimer = 0;
+    // If this guard was marked as a bounty hunter, resolve the bounty
+    try {
+      const isBounty = this.sprite.getData && this.sprite.getData('bounty');
+      if (isBounty) {
+        const currentTown = this.scene.registry.get('currentTownId');
+        const bounties = this.scene.registry.get('townBounties') || {};
+        const amount = bounties[currentTown] || 0;
+        if (amount > 0) {
+          // Penalize player by removing some gold (simple resolution) and clear bounty
+          try {
+            const gold = this.scene.registry.get('gold') || 0;
+            const take = Math.min(amount, Math.floor(gold * 0.5) + Math.floor(amount * 0.1));
+            this.scene.registry.set('gold', Math.max(0, gold - take));
+          } catch (e) {}
+          bounties[currentTown] = 0;
+          this.scene.registry.set('townBounties', bounties);
+          try { this.scene.events.emit('bountyResolved', { townId: currentTown, amount }); } catch (e) {}
+          try { this.scene.events.emit('townBountiesChanged', { townId: currentTown, amount: 0 }); } catch (e) {}
+        }
+      }
+    } catch (e) {}
     this.scene.events.emit('playerCaptured');
   }
 

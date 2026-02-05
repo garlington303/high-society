@@ -26,30 +26,37 @@ export class Patron {
   }
 
   generateDemand() {
-    // Weighted random - more common wares are requested more often
-    const weights = {
-      moonleaf: 50,
-      vigor: 30,
-      dragonsbreath: 15,
-      shadowbane: 5
-    };
+    // Choose from available wares (robust to changes in WARES)
+    const available = Object.keys(WARES || {});
+    if (available.length === 0) {
+      this.wantsWare = null;
+      this.wantsQuantity = 0;
+      this.offerPrice = 0;
+      return;
+    }
+
+    // Build simple weight map. If WARES defines a `weight` field use it,
+    // otherwise treat all wares as equally likely.
+    const weights = {};
+    for (const w of available) {
+      weights[w] = (WARES[w] && WARES[w].weight) ? WARES[w].weight : 1;
+    }
 
     const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
-    let random = Math.random() * totalWeight;
-
+    let rnd = Math.random() * totalWeight;
     for (const [ware, weight] of Object.entries(weights)) {
-      random -= weight;
-      if (random <= 0) {
+      rnd -= weight;
+      if (rnd <= 0) {
         this.wantsWare = ware;
         break;
       }
     }
 
-    this.wantsWare = this.wantsWare || 'moonleaf';
+    this.wantsWare = this.wantsWare || available[0];
     this.wantsQuantity = Phaser.Math.RND.between(1, 3);
 
     // Price they're willing to pay (with some variance)
-    const basePrice = WARES[this.wantsWare].sellPrice;
+    const basePrice = (WARES[this.wantsWare] && WARES[this.wantsWare].sellPrice) || 10;
     this.offerPrice = Math.floor(basePrice * (0.9 + Math.random() * 0.3));
   }
 

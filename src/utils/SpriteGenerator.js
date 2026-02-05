@@ -20,6 +20,12 @@ export function generateSprites(scene) {
   // Alchemist sprites
   generateAlchemistSprites(scene, g);
 
+  // Consumable merchant sprites (food vendors)
+  generateMerchantSprites(scene, g);
+
+  // Exit sign texture
+  generateExitSign(scene, g);
+
   // Patron sprites
   generatePatronSprites(scene, g);
 
@@ -29,6 +35,9 @@ export function generateSprites(scene) {
   // UI elements - Reset scale for UI
   g.setScale(1);
   generateUIElements(scene, g);
+
+  // Item icons for inventory
+  generateItemIcons(scene, g);
 
   g.destroy();
 }
@@ -392,6 +401,50 @@ function generateAlchemistSprites(scene, g) {
   });
 }
 
+  function generateMerchantSprites(scene, g) {
+    const size = 32;
+    g.clear();
+
+    // Simple vendor: apron, satchel and warm colors
+    const robeColor = 0xc68642;
+    const robeDark = 0x8b5a36;
+    const skin = 0xf5d6ba;
+    const accent = 0x6b3f1f;
+
+    // Shadow
+    g.fillStyle(0x000000, 0.3);
+    g.fillEllipse(8, 15, 10, 4);
+
+    // Body
+    g.fillStyle(robeDark);
+    g.fillRect(3, 6, 10, 9);
+    g.fillStyle(robeColor);
+    g.fillRect(3, 6, 9, 8);
+
+    // Apron
+    g.fillStyle(0xd9c9a6);
+    g.fillRect(5, 9, 6, 6);
+
+    // Satchel on side
+    g.fillStyle(accent);
+    g.fillRect(11, 10, 3, 4);
+
+    // Head
+    g.fillStyle(skin);
+    g.fillRoundedRect(5, 1, 6, 6, 1);
+
+    // Simple eyes
+    g.fillStyle(0x2c3e50);
+    g.fillRect(6, 4, 1, 1);
+    g.fillRect(9, 4, 1, 1);
+
+    // Small food token on apron (visual cue)
+    g.fillStyle(0xffcc66);
+    g.fillRect(7, 11, 2, 2);
+
+    g.generateTexture('merchant_down', size, size);
+  }
+
 function generatePatronSprites(scene, g) {
   const size = 32;
   const leatherColor = 0x8b4513;
@@ -492,6 +545,28 @@ function generatePatronSprites(scene, g) {
 
     g.generateTexture(`patron_served_${dir}`, size, size);
   });
+}
+
+function generateExitSign(scene, g) {
+  const w = 24, h = 18;
+  g.clear();
+  // Post pole shadow
+  g.fillStyle(0x2b2b2b, 0.6);
+  g.fillRect(10, 6, 2, 10);
+
+  // Sign background
+  g.fillStyle(0x8b4513);
+  g.fillRoundedRect(2, 0, w, h, 3);
+  // Inner plaque
+  g.fillStyle(0xfff2dd);
+  g.fillRoundedRect(4, 2, w-8, h-6, 2);
+
+  // Arrow mark
+  g.fillStyle(0x6b3f1f);
+  g.fillRect(8, 6, 6, 2);
+  g.fillTriangle(14, 5, 14, 9, 17, 7);
+
+  g.generateTexture('exit_sign', w, h + 6);
 }
 
 function generateEnvironmentTiles(scene, g) {
@@ -604,26 +679,27 @@ function generateEnvironmentTiles(scene, g) {
   g.fillRect(6, 0, 4, 16);
   g.generateTexture('alley', size, size);
 
-  // Garden/green space
+  // Garden/green space - use loaded bush tile if available, otherwise procedural green
   g.clear();
-  g.fillStyle(0x228b22);
-  g.fillRect(0, 0, 16, 16);
-  // Grass variation
-  g.fillStyle(0x2e8b2e);
-  g.fillRect(0, 0, 8, 8);
-  g.fillRect(8, 8, 8, 8);
-  // Flowers/herbs
-  g.fillStyle(0xdda0dd);
-  g.fillRect(2, 3, 2, 2);
-  g.fillStyle(0xff6347);
-  g.fillRect(11, 6, 2, 2);
-  g.fillStyle(0x87ceeb);
-  g.fillRect(5, 11, 2, 2);
-  // Darker grass patches
-  g.fillStyle(0x006400);
-  g.fillRect(7, 2, 3, 3);
-  g.fillRect(1, 10, 3, 3);
-  g.generateTexture('garden', size, size);
+  if (!scene.textures.exists('garden')) {
+    // Fallback procedural garden with proper green coloring
+    g.fillStyle(0x5a8f3a); // base green
+    g.fillRect(0, 0, 16, 16);
+    // Grass variation
+    g.fillStyle(0x6ba34a);
+    g.fillRect(0, 0, 8, 8);
+    g.fillRect(8, 8, 8, 8);
+    // Leaf texture detail
+    g.fillStyle(0x4a7f2a);
+    g.fillRect(2, 3, 3, 3);
+    g.fillRect(11, 6, 3, 3);
+    g.fillRect(5, 11, 3, 3);
+    // Highlight patches
+    g.fillStyle(0x7ab35a);
+    g.fillRect(7, 2, 2, 2);
+    g.fillRect(1, 10, 2, 2);
+    g.generateTexture('garden', size, size);
+  }
 
   // Stash spot (hidden cache)
   g.clear();
@@ -1010,4 +1086,271 @@ function generateUIElements(scene, g) {
   g.fillRect(34, 48, 6, 8);
 
   g.generateTexture('alchemist_portrait', pSize, pSize);
+  // Consumable vendor portrait (friendly innkeeper / merchant)
+  g.clear();
+  const cpSize = 64;
+  // Warm tavern background
+  g.fillStyle(0x2b241a);
+  g.fillRect(0, 0, cpSize, cpSize);
+  // Soft vignette edges
+  g.fillStyle(0x1a130f);
+  g.fillRect(0, 0, 6, cpSize);
+  g.fillRect(cpSize - 6, 0, 6, cpSize);
+
+  // Tunic/body
+  g.fillStyle(0x8b5a2b);
+  g.fillRect(12, 34, 40, 28);
+  g.fillStyle(0xa66e3a);
+  g.fillRect(14, 36, 36, 24);
+
+  // Head / hair
+  g.fillStyle(0xf1d7b5);
+  g.fillRect(18, 12, 28, 22);
+  g.fillStyle(0x5a3c2a);
+  g.fillRect(16, 8, 32, 10);
+
+  // Eyes (friendly)
+  g.fillStyle(0x2b6f44);
+  g.fillRect(24, 22, 4, 4);
+  g.fillRect(36, 22, 4, 4);
+  g.fillStyle(0x000000);
+  g.fillRect(25, 23, 1, 1);
+  g.fillRect(37, 23, 1, 1);
+
+  // Smiling mouth
+  g.fillStyle(0x772222);
+  g.fillRect(30, 30, 4, 1);
+
+  // Scarf or apron detail
+  g.fillStyle(0xd4af7f);
+  g.fillRect(22, 40, 20, 4);
+
+  g.generateTexture('consumable_portrait', cpSize, cpSize);
+}
+
+/**
+ * Generate item icons for inventory system
+ */
+function generateItemIcons(scene, g) {
+  const size = 24; // Icons are 24x24
+
+  // Health Potion (red)
+  g.clear();
+  g.fillStyle(0x1a0506);
+  g.fillRoundedRect(6, 8, 12, 14, 3);
+  g.fillStyle(0xe74c3c);
+  g.fillRoundedRect(7, 9, 10, 12, 2);
+  g.fillStyle(0xff6b6b);
+  g.fillRect(8, 10, 4, 6);
+  // Cork
+  g.fillStyle(0x8b4513);
+  g.fillRect(8, 4, 8, 5);
+  g.fillStyle(0xa0522d);
+  g.fillRect(9, 5, 6, 3);
+  g.generateTexture('item_potion_red', size, size);
+
+  // Stamina Potion (green)
+  g.clear();
+  g.fillStyle(0x0a1a06);
+  g.fillRoundedRect(6, 8, 12, 14, 3);
+  g.fillStyle(0x27ae60);
+  g.fillRoundedRect(7, 9, 10, 12, 2);
+  g.fillStyle(0x2ecc71);
+  g.fillRect(8, 10, 4, 6);
+  g.fillStyle(0x8b4513);
+  g.fillRect(8, 4, 8, 5);
+  g.fillStyle(0xa0522d);
+  g.fillRect(9, 5, 6, 3);
+  g.generateTexture('item_potion_green', size, size);
+
+  // Bread
+  g.clear();
+  g.fillStyle(0x8b4513);
+  g.fillRoundedRect(3, 10, 18, 10, 4);
+  g.fillStyle(0xcd853f);
+  g.fillRoundedRect(4, 11, 16, 8, 3);
+  g.fillStyle(0xdeb887);
+  g.fillRect(6, 12, 3, 4);
+  g.fillRect(11, 12, 4, 4);
+  // Score marks
+  g.fillStyle(0x8b4513);
+  g.fillRect(8, 13, 1, 3);
+  g.fillRect(13, 13, 1, 3);
+  g.generateTexture('item_bread', size, size);
+
+  // Cheese
+  g.clear();
+  g.fillStyle(0xd4a017);
+  g.fillTriangle(4, 20, 12, 4, 20, 20);
+  g.fillStyle(0xf4c430);
+  g.fillTriangle(5, 19, 12, 6, 18, 19);
+  // Holes
+  g.fillStyle(0xc49c14);
+  g.fillCircle(10, 14, 2);
+  g.fillCircle(14, 16, 1);
+  g.generateTexture('item_cheese', size, size);
+
+  // Water Flask
+  g.clear();
+  g.fillStyle(0x5d4e37);
+  g.fillRoundedRect(6, 6, 12, 16, 4);
+  g.fillStyle(0x6b8e7d);
+  g.fillRoundedRect(7, 7, 10, 14, 3);
+  g.fillStyle(0x87ceeb);
+  g.fillRect(9, 10, 6, 8);
+  // Cap
+  g.fillStyle(0x8b4513);
+  g.fillRect(9, 4, 6, 4);
+  g.generateTexture('item_flask', size, size);
+
+  // Ale mug
+  g.clear();
+  g.fillStyle(0x5d4e37);
+  g.fillRoundedRect(5, 8, 12, 14, 2);
+  g.fillStyle(0x8b7355);
+  g.fillRoundedRect(6, 9, 10, 12, 2);
+  // Handle
+  g.fillStyle(0x5d4e37);
+  g.fillRect(16, 10, 4, 8);
+  g.fillStyle(0x8b7355);
+  g.fillRect(17, 12, 2, 4);
+  // Foam
+  g.fillStyle(0xfffacd);
+  g.fillRect(7, 9, 8, 3);
+  g.generateTexture('item_ale', size, size);
+
+  // Cooked Meat
+  g.clear();
+  g.fillStyle(0x8b4513);
+  g.fillEllipse(12, 14, 10, 6);
+  g.fillStyle(0xcd853f);
+  g.fillEllipse(12, 13, 8, 5);
+  g.fillStyle(0xdaa520);
+  g.fillRect(9, 11, 6, 3);
+  // Bone
+  g.fillStyle(0xf5f5dc);
+  g.fillRect(3, 12, 5, 3);
+  g.fillRect(18, 12, 4, 3);
+  g.generateTexture('item_meat', size, size);
+
+  // Dreamleaf (purple herb)
+  g.clear();
+  g.fillStyle(0x228b22);
+  g.fillRect(11, 14, 2, 8);
+  g.fillStyle(0x9932cc);
+  g.fillEllipse(8, 10, 6, 8);
+  g.fillEllipse(16, 10, 6, 8);
+  g.fillStyle(0xba55d3);
+  g.fillEllipse(12, 6, 8, 10);
+  g.generateTexture('item_herb_purple', size, size);
+
+  // Moonpetal (blue flower)
+  g.clear();
+  g.fillStyle(0x228b22);
+  g.fillRect(11, 14, 2, 8);
+  g.fillStyle(0x4169e1);
+  g.fillCircle(8, 10, 4);
+  g.fillCircle(16, 10, 4);
+  g.fillCircle(12, 6, 5);
+  g.fillStyle(0x87ceeb);
+  g.fillCircle(12, 9, 3);
+  g.generateTexture('item_flower_blue', size, size);
+
+  // Shadow Essence (black vial)
+  g.clear();
+  g.fillStyle(0x1a1a2e);
+  g.fillRoundedRect(7, 8, 10, 14, 3);
+  g.fillStyle(0x16213e);
+  g.fillRoundedRect(8, 9, 8, 12, 2);
+  // Swirling darkness
+  g.fillStyle(0x0f0f1e);
+  g.fillCircle(12, 14, 3);
+  g.fillStyle(0x4a0080);
+  g.fillRect(10, 12, 2, 2);
+  g.fillRect(13, 15, 2, 2);
+  g.fillStyle(0x2d2d44);
+  g.fillRect(9, 4, 6, 5);
+  g.generateTexture('item_vial_black', size, size);
+
+  // King's Gold (gold powder)
+  g.clear();
+  g.fillStyle(0x5d4037);
+  g.fillRoundedRect(4, 10, 16, 12, 3);
+  g.fillStyle(0x8d6e63);
+  g.fillRoundedRect(5, 11, 14, 10, 2);
+  g.fillStyle(0xffd700);
+  g.fillRect(7, 12, 10, 6);
+  g.fillStyle(0xffeb3b);
+  g.fillRect(8, 13, 4, 3);
+  // Sparkles
+  g.fillStyle(0xffffff);
+  g.fillRect(9, 14, 1, 1);
+  g.fillRect(14, 13, 1, 1);
+  g.generateTexture('item_powder_gold', size, size);
+
+  // Iron Ore
+  g.clear();
+  g.fillStyle(0x4a4a4a);
+  g.fillRoundedRect(4, 8, 16, 14, 4);
+  g.fillStyle(0x6b6b6b);
+  g.fillRect(6, 10, 12, 10);
+  g.fillStyle(0x8b8b8b);
+  g.fillRect(8, 12, 4, 4);
+  g.fillRect(13, 14, 3, 3);
+  g.fillStyle(0x3d3d3d);
+  g.fillRect(7, 11, 2, 2);
+  g.generateTexture('item_ore_iron', size, size);
+
+  // Leather
+  g.clear();
+  g.fillStyle(0x8b4513);
+  g.fillRoundedRect(3, 6, 18, 14, 3);
+  g.fillStyle(0xa0522d);
+  g.fillRect(5, 8, 14, 10);
+  g.fillStyle(0xcd853f);
+  g.fillRect(7, 10, 4, 4);
+  g.fillRect(13, 12, 3, 3);
+  // Stitching
+  g.fillStyle(0x5d3a1a);
+  g.fillRect(4, 12, 1, 6);
+  g.fillRect(19, 10, 1, 6);
+  g.generateTexture('item_leather', size, size);
+
+  // Cloth
+  g.clear();
+  g.fillStyle(0xb0c4de);
+  g.fillRoundedRect(3, 8, 18, 12, 2);
+  g.fillStyle(0xdcdcdc);
+  g.fillRect(5, 10, 14, 8);
+  // Fold lines
+  g.fillStyle(0x9fb3c9);
+  g.fillRect(8, 10, 1, 8);
+  g.fillRect(15, 10, 1, 8);
+  g.generateTexture('item_cloth', size, size);
+
+  // Guild Token
+  g.clear();
+  g.fillStyle(0xffd700);
+  g.fillCircle(12, 12, 9);
+  g.fillStyle(0xdaa520);
+  g.fillCircle(12, 12, 7);
+  g.fillStyle(0xffd700);
+  g.fillCircle(12, 12, 5);
+  // Emblem
+  g.fillStyle(0x8b4513);
+  g.fillRect(10, 9, 4, 6);
+  g.fillRect(9, 11, 6, 2);
+  g.generateTexture('item_token', size, size);
+
+  // Key
+  g.clear();
+  g.fillStyle(0x8b4513);
+  g.fillCircle(8, 8, 5);
+  g.fillStyle(0xa0522d);
+  g.fillCircle(8, 8, 3);
+  g.fillStyle(0x8b4513);
+  g.fillRect(10, 6, 10, 4);
+  g.fillRect(16, 10, 3, 4);
+  g.fillRect(18, 10, 2, 6);
+  g.generateTexture('item_key', size, size);
 }
